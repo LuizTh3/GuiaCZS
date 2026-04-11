@@ -165,9 +165,6 @@ export default function CategoryPage() {
                       <PlaceCard
                         key={place.id}
                         place={place}
-                        onClick={() => {
-                          alert(`Navegando para: /${place.category}/${place.id}`);
-                        }}
                       />
                     ))}
                   </div>

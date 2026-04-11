@@ -1,20 +1,28 @@
-import type { Place } from '../../types';
+import { Link } from 'react-router-dom';
+import type { Place, Category } from '../../types';
 import { getCategoryLabel, getCategoryColor } from '../../data/mockData';
+
+const CATEGORY_ROUTES: Record<Category, string> = {
+  turismo: 'turismo',
+  estabelecimento: 'estabelecimentos',
+  servico: 'servicos',
+};
 
 interface PlaceCardProps {
   place: Place;
-  onClick?: () => void;
 }
 
-export default function PlaceCard({ place, onClick }: PlaceCardProps) {
+export default function PlaceCard({ place }: PlaceCardProps) {
+  const linkTo = `/${CATEGORY_ROUTES[place.category]}/${place.id}`;
+
   return (
-    <div
-      onClick={onClick}
-      className="group cursor-pointer bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+    <Link
+      to={linkTo}
+      className="group block bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
     >
       <div className="relative h-48 overflow-hidden">
         <img
-          src={place.image}
+          src={place.image || 'https://via.placeholder.com/400x300?text=Sem+imagem'}
           alt={place.name}
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
         />
@@ -34,6 +42,6 @@ export default function PlaceCard({ place, onClick }: PlaceCardProps) {
           {place.description}
         </p>
       </div>
-    </div>
+    </Link>
   );
 }

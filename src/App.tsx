@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Home from './pages/Home';
 import CategoryPage from './pages/CategoryPage';
+import PlaceProfile from './pages/PlaceProfile';
 import Login from './pages/admin/Login';
 import Dashboard from './pages/admin/Dashboard';
 
@@ -45,6 +46,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/:category" element={<CategoryPage />} />
+      <Route path="/:category/:id" element={<PlaceProfile />} />
       <Route path="/admin/login" element={<Login />} />
       <Route
         path="/admin"
