@@ -31,11 +31,11 @@ export default function PublicationItem({ place, onEdit, onDelete }: Publication
                 >
                   {getCategoryLabel(place.category)}
                 </span>
-                {place.subcategory && (
-                  <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-600">
-                    {place.subcategory}
+                {place.subcategories && place.subcategories.map((sub) => (
+                  <span key={sub} className="px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-600">
+                    {sub}
                   </span>
-                )}
+                ))}
               </div>
               <h3 className="font-bold text-lg text-primary truncate">{place.name}</h3>
             </div>

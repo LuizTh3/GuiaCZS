@@ -4,7 +4,7 @@ export interface Place {
   id: string;
   name: string;
   category: Category;
-  subcategory?: string;
+  subcategories?: string[];
   description: string;
   image: string;
   address?: string;

@@ -20,7 +20,7 @@ export default function PlaceCard({ place }: PlaceCardProps) {
       to={linkTo}
       className="group block bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
     >
-      <div className="relative h-48 overflow-hidden">
+      <div className="relative h-40 overflow-hidden">
         <img
           src={place.image || 'https://via.placeholder.com/400x300?text=Sem+imagem'}
           alt={place.name}

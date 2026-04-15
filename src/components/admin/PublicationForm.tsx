@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { X, ImagePlus } from 'lucide-react';
 import type { Place, Category } from '../../types';
-import SubcategoryInput from './SubcategoryInput';
+import SubcategoryMultiSelect from './SubcategoryMultiSelect';
 
 interface PublicationFormProps {
   isOpen: boolean;
@@ -24,7 +24,7 @@ export default function PublicationForm({
 }: PublicationFormProps) {
   const [name, setName] = useState('');
   const [category, setCategory] = useState<Category>('estabelecimento');
-  const [subcategory, setSubcategory] = useState('');
+  const [subcategories, setSubcategories] = useState<string[]>([]);
   const [description, setDescription] = useState('');
   const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');
@@ -38,7 +38,7 @@ export default function PublicationForm({
     if (place) {
       setName(place.name);
       setCategory(place.category);
-      setSubcategory(place.subcategory || '');
+      setSubcategories(place.subcategories || []);
       setDescription(place.description);
       setAddress(place.address || '');
       setPhone(place.phone || '');
@@ -51,7 +51,7 @@ export default function PublicationForm({
   const resetForm = () => {
     setName('');
     setCategory('estabelecimento');
-    setSubcategory('');
+    setSubcategories([]);
     setDescription('');
     setAddress('');
     setPhone('');
@@ -107,7 +107,7 @@ export default function PublicationForm({
       await onSave({
         name: name.trim(),
         category,
-        subcategory: subcategory.trim() || undefined,
+        subcategories: subcategories.length > 0 ? subcategories : undefined,
         description: description.trim(),
         address: address.trim() || undefined,
         phone: phone.trim() || undefined,
@@ -184,9 +184,9 @@ export default function PublicationForm({
             </div>
           </div>
 
-          <SubcategoryInput
-            value={subcategory}
-            onChange={setSubcategory}
+          <SubcategoryMultiSelect
+            value={subcategories}
+            onChange={setSubcategories}
             category={category}
             isFormOpen={isOpen}
           />

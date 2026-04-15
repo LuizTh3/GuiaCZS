@@ -80,13 +80,14 @@ export default function PlaceProfile() {
   };
 
   const loadRelatedPlaces = async (currentPlace: Place) => {
-    if (!currentPlace.subcategory) return;
+    if (!currentPlace.subcategories || currentPlace.subcategories.length === 0) return;
 
     try {
+      const firstSubcategory = currentPlace.subcategories[0];
       const relatedQuery = query(
         collection(db, 'places'),
         where('category', '==', currentPlace.category),
-        where('subcategory', '==', currentPlace.subcategory),
+        where('subcategories', 'array-contains', firstSubcategory),
         limit(4)
       );
 
@@ -171,11 +172,11 @@ export default function PlaceProfile() {
               <span className={`px-3 py-1 rounded-full text-sm font-semibold ${categoryConfig.color}`}>
                 {categoryConfig.title}
               </span>
-              {place.subcategory && (
-                <span className="px-3 py-1 rounded-full text-sm font-semibold bg-gray-100 text-gray-600">
-                  {place.subcategory}
+              {place.subcategories && place.subcategories.map((sub) => (
+                <span key={sub} className="px-3 py-1 rounded-full text-sm font-semibold bg-gray-100 text-gray-600">
+                  {sub}
                 </span>
-              )}
+              ))}
             </div>
 
             <h1 className="text-2xl sm:text-3xl font-bold text-primary mb-6">

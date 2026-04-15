@@ -5,6 +5,7 @@ import { db } from '../lib/firebase';
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
 import PlaceCard from '../components/ui/PlaceCard';
+import Pagination from '../components/ui/Pagination';
 import type { Place, Category } from '../types';
 
 const categories: { key: Category | 'all'; label: string }[] = [
@@ -14,11 +15,14 @@ const categories: { key: Category | 'all'; label: string }[] = [
   { key: 'servico', label: 'Serviços' },
 ];
 
+const ITEMS_PER_PAGE = 12;
+
 export default function Home() {
   const [places, setPlaces] = useState<Place[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<Category | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     const loadPlaces = async () => {
@@ -40,8 +44,12 @@ export default function Home() {
     loadPlaces();
   }, []);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategory, searchQuery]);
+
   const filteredPlaces = useMemo(() => {
-    return places.filter((place) => {
+    let filtered = places.filter((place) => {
       const matchesCategory = selectedCategory === 'all' || place.category === selectedCategory;
       const matchesSearch =
         searchQuery === '' ||
@@ -49,14 +57,29 @@ export default function Home() {
         place.description.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesCategory && matchesSearch;
     });
+
+    if (selectedCategory === 'all') {
+      filtered = [
+        ...filtered.filter((p) => p.category !== 'turismo'),
+        ...filtered.filter((p) => p.category === 'turismo'),
+      ];
+    }
+
+    return filtered;
   }, [places, selectedCategory, searchQuery]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredPlaces.length / ITEMS_PER_PAGE));
+  const paginatedPlaces = filteredPlaces.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       <Header places={places} />
 
       <main className="flex-1">
-        <section className="bg-gradient-to-br from-primary via-primary to-secondary py-16 sm:py-24">
+        <section className="bg-linear-to-br from-primary via-primary to-secondary py-16 sm:py-24">
           <div className="container mx-auto px-4 text-center">
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-4">
               Descubra o melhor de <span className="text-accent">Cruzeiro do Sul</span>
@@ -103,14 +126,21 @@ export default function Home() {
               <span className="ml-3 text-gray-500">Carregando publicações...</span>
             </div>
           ) : filteredPlaces.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredPlaces.map((place) => (
-                <PlaceCard
-                  key={place.id}
-                  place={place}
-                />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {paginatedPlaces.map((place) => (
+                  <PlaceCard
+                    key={place.id}
+                    place={place}
+                  />
+                ))}
+              </div>
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+              />
+            </>
           ) : (
             <div className="text-center py-16">
               <p className="text-gray-500 text-lg">Nenhuma publicação encontrada.</p>

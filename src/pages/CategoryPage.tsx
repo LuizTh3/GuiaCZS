@@ -92,7 +92,9 @@ export default function CategoryPage() {
 
   const filteredPlaces = useMemo(() => {
     if (selectedSubcategory === 'all') return allPlaces;
-    return allPlaces.filter((place) => place.subcategory === selectedSubcategory);
+    return allPlaces.filter((place) => 
+      place.subcategories?.includes(selectedSubcategory) ?? false
+    );
   }, [allPlaces, selectedSubcategory]);
 
   const totalPages = Math.ceil(filteredPlaces.length / ITEMS_PER_PAGE);

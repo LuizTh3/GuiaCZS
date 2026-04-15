@@ -150,7 +150,7 @@ export default function Dashboard() {
     const matchesCategory = selectedCategory === 'all' || place.category === selectedCategory;
     const matchesSubcategory =
       selectedSubcategory === 'all' ||
-      place.subcategory === selectedSubcategory;
+      (place.subcategories?.includes(selectedSubcategory) ?? false);
     const matchesSearch =
       searchQuery === '' ||
       place.name.toLowerCase().includes(searchQuery.toLowerCase());
