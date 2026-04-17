@@ -106,7 +106,7 @@ export default function PlaceProfile() {
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col bg-gray-50">
-        <Header places={[]} />
+        <Header />
         <main className="flex-1 flex items-center justify-center">
           <Loader2 className="w-8 h-8 text-accent animate-spin" />
         </main>
@@ -118,7 +118,7 @@ export default function PlaceProfile() {
   if (notFound || !place) {
     return (
       <div className="min-h-screen flex flex-col bg-gray-50">
-        <Header places={[]} />
+        <Header />
         <main className="flex-1 flex items-center justify-center">
           <div className="text-center p-8">
             <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -146,19 +146,27 @@ export default function PlaceProfile() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      <Header places={[]} />
+      <Header />
 
       <main className="flex-1">
-        <div className="relative h-64 sm:h-80 md:h-96">
+        <div className="relative min-h-[300px] sm:min-h-[400px] md:min-h-[450px] lg:min-h-[500px] max-h-[80vh] overflow-hidden bg-black">
+          {place.image && (
+            <img
+              src={place.image}
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover blur-2xl scale-110"
+              aria-hidden="true"
+            />
+          )}
           <img
             src={place.image || 'https://via.placeholder.com/1200x600?text=Sem+imagem'}
             alt={place.name}
-            className="w-full h-full object-cover"
+            className="relative w-full h-full max-h-[80vh] object-contain"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/20 to-transparent pointer-events-none" />
         </div>
 
-        <div className="container mx-auto px-4 -mt-16 relative z-10">
+        <div className="container mx-auto px-4 mt-0 relative z-10">
           <div className="bg-white rounded-2xl shadow-lg p-6 sm:p-8">
             <Link
               to={`/${categoryRoute}`}

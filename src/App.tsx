@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Home from './pages/Home';
 import CategoryPage from './pages/CategoryPage';
 import PlaceProfile from './pages/PlaceProfile';
+import GroupPage from './pages/GroupPage';
 import Login from './pages/admin/Login';
 import Dashboard from './pages/admin/Dashboard';
 
@@ -47,6 +48,7 @@ function AppRoutes() {
       <Route path="/" element={<Home />} />
       <Route path="/:category" element={<CategoryPage />} />
       <Route path="/:category/:id" element={<PlaceProfile />} />
+      <Route path="/grupo/:slug" element={<GroupPage />} />
       <Route path="/admin/login" element={<Login />} />
       <Route
         path="/admin"

@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Plus, Search, AlertTriangle, CheckCircle, XCircle, Tag } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Plus, Search, AlertTriangle, CheckCircle, XCircle, Tag, Layers } from 'lucide-react';
 import {
   collection,
   getDocs,
@@ -15,7 +15,11 @@ import AdminHeader from '../../components/layout/AdminHeader';
 import PublicationItem from '../../components/admin/PublicationItem';
 import PublicationForm from '../../components/admin/PublicationForm';
 import SubcategoryManager from '../../components/admin/SubcategoryManager';
+import Pagination from '../../components/ui/Pagination';
+import GroupsManager from './GroupsManager';
 import type { Place, Category, Subcategory } from '../../types';
+
+const ITEMS_PER_PAGE = 7;
 
 const categories: { value: Category | 'all'; label: string }[] = [
   { value: 'all', label: 'Todos' },
@@ -31,14 +35,24 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<Category | 'all'>('all');
   const [selectedSubcategory, setSelectedSubcategory] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState(1);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isSubcategoryManagerOpen, setIsSubcategoryManagerOpen] = useState(false);
   const [editingPlace, setEditingPlace] = useState<Place | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [showGroups, setShowGroups] = useState(false);
   const [notification, setNotification] = useState<{
     type: 'success' | 'error';
     message: string;
   } | null>(null);
+  const publicationsRef = useRef<HTMLDivElement>(null);
+  const groupsRef = useRef<HTMLDivElement>(null);
+
+  const scrollToSection = (ref: React.RefObject<HTMLDivElement | null>) => {
+    setTimeout(() => {
+      ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  };
 
   useEffect(() => {
     loadPlaces();
@@ -48,6 +62,10 @@ export default function Dashboard() {
   useEffect(() => {
     setSelectedSubcategory('all');
   }, [selectedCategory]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategory, selectedSubcategory, searchQuery]);
 
   const loadPlaces = async () => {
     try {
@@ -157,6 +175,12 @@ export default function Dashboard() {
     return matchesCategory && matchesSubcategory && matchesSearch;
   });
 
+  const totalPages = Math.max(1, Math.ceil(filteredPlaces.length / ITEMS_PER_PAGE));
+  const paginatedPlaces = filteredPlaces.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
   return (
     <div className="min-h-screen bg-gray-50">
       <AdminHeader />
@@ -169,7 +193,7 @@ export default function Dashboard() {
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="p-6 border-b border-gray-100">
-            <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex flex-wrap gap-4">
               <button
                 onClick={() => {
                   setEditingPlace(null);
@@ -186,7 +210,36 @@ export default function Dashboard() {
                 className="px-5 py-3 bg-secondary hover:bg-secondary/90 text-white rounded-xl transition-colors font-medium flex items-center justify-center gap-2"
               >
                 <Tag className="w-5 h-5" />
-                Gerenciar Subcategorias
+                Subcategorias
+              </button>
+
+              <button
+                onClick={() => {
+                  if (showGroups) {
+                    setShowGroups(false);
+                    scrollToSection(publicationsRef);
+                  } else {
+                    setShowGroups(true);
+                    scrollToSection(groupsRef);
+                  }
+                }}
+                className={`px-5 py-3 rounded-xl transition-colors font-medium flex items-center justify-center gap-2 ${
+                  showGroups
+                    ? 'bg-accent hover:bg-accent/90 text-white'
+                    : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                }`}
+              >
+                {showGroups ? (
+                  <>
+                    <Layers className="w-5 h-5" />
+                    Publicações
+                  </>
+                ) : (
+                  <>
+                    <Layers className="w-5 h-5" />
+                    Grupos
+                  </>
+                )}
               </button>
 
               <div className="flex-1 flex flex-col sm:flex-row gap-4">
@@ -229,39 +282,53 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="p-6">
-            {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="w-8 h-8 border-4 border-accent/30 border-t-accent rounded-full animate-spin" />
-              </div>
-            ) : filteredPlaces.length > 0 ? (
-              <div className="space-y-4">
-                <p className="text-sm text-gray-500 mb-4">
-                  {filteredPlaces.length} publicação(ões) encontrada(s)
-                </p>
-                {filteredPlaces.map((place) => (
-                  <PublicationItem
-                    key={place.id}
-                    place={place}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-                  <Search className="w-8 h-8 text-gray-400" />
+          {showGroups ? (
+            <div ref={groupsRef} className="p-6">
+              <GroupsManager onBack={() => {
+                setShowGroups(false);
+                scrollToSection(publicationsRef);
+              }} />
+            </div>
+          ) : (
+            <div ref={publicationsRef} className="p-6">
+              {loading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="w-8 h-8 border-4 border-accent/30 border-t-accent rounded-full animate-spin" />
                 </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-1">Nenhuma publicação encontrada</h3>
-                <p className="text-gray-500">
-                  {searchQuery || selectedCategory !== 'all'
-                    ? 'Tente ajustar seus filtros de busca'
-                    : 'Comece adicionando sua primeira publicação'}
-                </p>
-              </div>
-            )}
-          </div>
+              ) : filteredPlaces.length > 0 ? (
+                <div className="space-y-4">
+                  <p className="text-sm text-gray-500 mb-4">
+                    {filteredPlaces.length} publicação(ões) encontrada(s)
+                  </p>
+                  {paginatedPlaces.map((place) => (
+                    <PublicationItem
+                      key={place.id}
+                      place={place}
+                      onEdit={handleEdit}
+                      onDelete={handleDelete}
+                    />
+                  ))}
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                  />
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                    <Search className="w-8 h-8 text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-1">Nenhuma publicação encontrada</h3>
+                  <p className="text-gray-500">
+                    {searchQuery || selectedCategory !== 'all'
+                      ? 'Tente ajustar seus filtros de busca'
+                      : 'Comece adicionando sua primeira publicação'}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </main>
 

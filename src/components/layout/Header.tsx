@@ -1,25 +1,10 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Menu, MapPin, Search, X } from 'lucide-react';
+import { Menu, MapPin } from 'lucide-react';
 import MobileDrawer from './MobileDrawer';
-import type { Place } from '../../types';
 
-interface HeaderProps {
-  places: Place[];
-}
-
-export default function Header({ places }: HeaderProps) {
+export default function Header() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-
-  const filteredPlaces = searchQuery
-    ? places.filter(
-        (place) =>
-          place.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          place.description.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : [];
 
   return (
     <>
@@ -56,52 +41,6 @@ export default function Header({ places }: HeaderProps) {
             </nav>
 
             <div className="flex items-center gap-2">
-              <div className="relative">
-                {isSearchOpen ? (
-                  <div className="flex items-center">
-                    <input
-                      type="text"
-                      placeholder="Buscar..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-40 sm:w-64 px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-accent/50 text-sm"
-                      autoFocus
-                    />
-                    <button
-                      onClick={() => {
-                        setIsSearchOpen(false);
-                        setSearchQuery('');
-                      }}
-                      className="ml-2 p-2 hover:bg-gray-100 rounded-full"
-                    >
-                      <X className="w-4 h-4 text-gray-500" />
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setIsSearchOpen(true)}
-                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                  >
-                    <Search className="w-5 h-5 text-gray-600" />
-                  </button>
-                )}
-
-                {searchQuery && filteredPlaces.length > 0 && (
-                  <div className="absolute top-full right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden">
-                    {filteredPlaces.slice(0, 5).map((place) => (
-                      <a
-                        key={place.id}
-                        href={`/${place.category}/${place.id}`}
-                        className="block px-4 py-3 hover:bg-gray-50 transition-colors"
-                      >
-                        <p className="font-medium text-primary text-sm">{place.name}</p>
-                        <p className="text-xs text-gray-500 truncate">{place.description}</p>
-                      </a>
-                    ))}
-                  </div>
-                )}
-              </div>
-
               <button
                 onClick={() => setIsDrawerOpen(true)}
                 className="md:hidden p-2 hover:bg-gray-100 rounded-full transition-colors"

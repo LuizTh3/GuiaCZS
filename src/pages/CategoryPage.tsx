@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { MapPin, Store, Wrench, Loader2, ArrowLeft } from 'lucide-react';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
+import { MapPin, Store, Wrench, Loader2, ArrowLeft, Search, Tag, Layers } from 'lucide-react';
 import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import Header from '../components/layout/Header';
@@ -8,7 +8,17 @@ import Footer from '../components/layout/Footer';
 import PlaceCard from '../components/ui/PlaceCard';
 import Pagination from '../components/ui/Pagination';
 import SubcategoryChips from '../components/ui/SubcategoryChips';
-import type { Place, Category, Subcategory } from '../types';
+import GroupCard from '../components/ui/GroupCard';
+import type { Place, Category, Subcategory, Group } from '../types';
+
+type SearchResultType = 'category' | 'group' | 'subcategory' | 'place';
+
+interface SearchResult {
+  type: SearchResultType;
+  name: string;
+  link: string;
+  subtitle?: string;
+}
 
 const ITEMS_PER_PAGE = 6;
 
@@ -44,11 +54,14 @@ const CATEGORY_CONFIG: Record<Category, { title: string; description: string; ic
 
 export default function CategoryPage() {
   const { category } = useParams<{ category: string }>();
+  const [searchParams] = useSearchParams();
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [allPlaces, setAllPlaces] = useState<Place[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
   const [selectedSubcategory, setSelectedSubcategory] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const validCategory = ROUTE_MAP[category || ''] || 'turismo';
 
@@ -56,19 +69,30 @@ export default function CategoryPage() {
   const CategoryIcon = config.icon;
 
   useEffect(() => {
+    const subParam = searchParams.get('sub');
+    if (subParam && subcategories.length > 0) {
+      const found = subcategories.find(s => s.name.toLowerCase() === subParam.toLowerCase());
+      if (found) {
+        setSelectedSubcategory(found.name);
+      }
+    }
+  }, [searchParams, subcategories]);
+
+  useEffect(() => {
     loadData();
   }, [validCategory]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedSubcategory]);
+  }, [selectedSubcategory, searchQuery]);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const [placesSnapshot, subcategoriesSnapshot] = await Promise.all([
+      const [placesSnapshot, subcategoriesSnapshot, groupsSnapshot] = await Promise.all([
         getDocs(query(collection(db, 'places'), where('category', '==', validCategory))),
         getDocs(query(collection(db, 'subcategories'), where('category', '==', validCategory), orderBy('name', 'asc'))),
+        getDocs(query(collection(db, 'groups'), where('isActive', '==', true), orderBy('order', 'asc'))),
       ]);
 
       const placesData = placesSnapshot.docs.map((doc) => ({
@@ -81,8 +105,19 @@ export default function CategoryPage() {
         ...doc.data(),
       })) as Subcategory[];
 
+      const groupsRaw = groupsSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+          createdAt: doc.data().createdAt?.toDate() || new Date(),
+        }));
+
+      const groupsData = (groupsRaw as Group[]).filter(
+        (g) => (g.category || 'estabelecimento') === validCategory
+      );
+
       setAllPlaces(placesData);
       setSubcategories(subcategoriesData);
+      setGroups(groupsData);
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
     } finally {
@@ -91,11 +126,105 @@ export default function CategoryPage() {
   };
 
   const filteredPlaces = useMemo(() => {
-    if (selectedSubcategory === 'all') return allPlaces;
-    return allPlaces.filter((place) => 
-      place.subcategories?.includes(selectedSubcategory) ?? false
+    const groupSubcategories = new Set<string>();
+    groups.forEach((group) => {
+      group.subcategories.forEach((sub) => groupSubcategories.add(sub));
+    });
+
+    const placesInGroups = allPlaces.filter((place) =>
+      place.subcategories?.some((sub) => groupSubcategories.has(sub))
     );
-  }, [allPlaces, selectedSubcategory]);
+
+    const hasSearch = searchQuery.trim() !== '';
+
+    let filtered = allPlaces.filter((place) => {
+      if (selectedSubcategory !== 'all' && selectedSubcategory !== '') {
+        return place.subcategories?.includes(selectedSubcategory) ?? false;
+      }
+      if (!hasSearch && placesInGroups.includes(place)) {
+        return false;
+      }
+      return true;
+    });
+
+    return filtered;
+  }, [allPlaces, selectedSubcategory, groups, searchQuery]);
+
+  const groupPlaceCount = useMemo(() => {
+    const countMap: Record<string, number> = {};
+    groups.forEach((group) => {
+      const count = allPlaces.filter((place) =>
+        place.subcategories?.some((sub) => group.subcategories.includes(sub))
+      ).length;
+      countMap[group.id] = count;
+    });
+    return countMap;
+  }, [groups, allPlaces]);
+
+  const searchResults = useMemo((): SearchResult[] => {
+    const query = searchQuery.toLowerCase().trim();
+    if (!query) return [];
+
+    const results: SearchResult[] = [];
+
+    // Categoria atual
+    const currentCategory = CATEGORY_CONFIG[validCategory];
+    if (currentCategory.title.toLowerCase().includes(query)) {
+      results.push({
+        type: 'category',
+        name: currentCategory.title,
+        link: `/${category}`,
+        subtitle: 'Categoria',
+      });
+    }
+
+    // Subcategorias da categoria
+    subcategories.forEach((sub) => {
+      if (sub.name.toLowerCase().includes(query)) {
+        const groupWithSub = groups.find(g => g.subcategories.includes(sub.name));
+        
+        let link: string;
+        if (groupWithSub) {
+          link = `/grupo/${groupWithSub.slug}`;
+        } else {
+          link = `/${category}`;
+        }
+        
+        results.push({
+          type: 'subcategory',
+          name: sub.name,
+          link,
+          subtitle: groupWithSub ? 'Grupo' : 'Subcategoria',
+        });
+      }
+    });
+
+    // Grupos da categoria
+    groups.forEach((group) => {
+      if (group.name.toLowerCase().includes(query)) {
+        results.push({
+          type: 'group',
+          name: group.name,
+          link: `/grupo/${group.slug}`,
+          subtitle: 'Grupo',
+        });
+      }
+    });
+
+    // Publicações da categoria (todas, incluindo em grupos)
+    allPlaces.forEach((place) => {
+      if (place.name.toLowerCase().includes(query)) {
+        results.push({
+          type: 'place',
+          name: place.name,
+          link: `/${place.category}/${place.id}`,
+          subtitle: CATEGORY_CONFIG[place.category]?.title || place.category,
+        });
+      }
+    });
+
+    return results.slice(0, 8);
+  }, [searchQuery, groups, allPlaces, subcategories, validCategory, category]);
 
   const totalPages = Math.ceil(filteredPlaces.length / ITEMS_PER_PAGE);
 
@@ -107,7 +236,7 @@ export default function CategoryPage() {
   if (!validCategory) {
     return (
       <div className="min-h-screen flex flex-col bg-gray-50">
-        <Header places={[]} />
+        <Header />
         <main className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-gray-900 mb-4">Categoria não encontrada</h1>
@@ -123,7 +252,7 @@ export default function CategoryPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      <Header places={allPlaces} />
+      <Header />
 
       <main className="flex-1">
         <section className="bg-gradient-to-br from-primary via-primary to-secondary py-12">
@@ -135,13 +264,56 @@ export default function CategoryPage() {
               <ArrowLeft className="w-4 h-4" />
               Voltar
             </Link>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 mb-6">
               <div className={`w-16 h-16 rounded-2xl ${config.bgColor} flex items-center justify-center`}>
                 <CategoryIcon className={`w-8 h-8 ${config.color}`} />
               </div>
               <div>
                 <h1 className="text-3xl font-bold text-white">{config.title}</h1>
                 <p className="text-white/80 mt-1">{config.description}</p>
+              </div>
+            </div>
+
+            <div className="max-w-xl mx-auto">
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder={`Buscar em ${config.title.toLowerCase()}...`}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-accent/50 bg-white shadow-sm"
+                />
+                {searchQuery && searchResults.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-10">
+                    {searchResults.map((result, index) => (
+                      <Link
+                        key={index}
+                        to={result.link}
+                        className="block px-4 py-3 hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-b-0"
+                      >
+                        <div className="flex items-center gap-3">
+                          {result.type === 'category' && (
+                            <Tag className="w-5 h-5 text-blue-500 flex-shrink-0" />
+                          )}
+                          {result.type === 'subcategory' && (
+                            <Tag className="w-5 h-5 text-orange-500 flex-shrink-0" />
+                          )}
+                          {result.type === 'group' && (
+                            <Layers className="w-5 h-5 text-purple-500 flex-shrink-0" />
+                          )}
+                          {result.type === 'place' && (
+                            <MapPin className="w-5 h-5 text-green-500 flex-shrink-0" />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-primary text-sm truncate">{result.name}</p>
+                            <p className="text-xs text-gray-500">{result.subtitle}</p>
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -154,6 +326,21 @@ export default function CategoryPage() {
             </div>
           ) : (
             <>
+              {groups.length > 0 && selectedSubcategory === 'all' && (
+                <div className="mb-8">
+                  <h2 className="text-lg font-bold text-primary mb-4">Explorar Categorias</h2>
+                  <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+                    {groups.map((group) => (
+                      <GroupCard 
+                        key={group.id} 
+                        group={group} 
+                        placeCount={groupPlaceCount[group.id] || 0}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <SubcategoryChips
                 subcategories={subcategories}
                 selected={selectedSubcategory}
